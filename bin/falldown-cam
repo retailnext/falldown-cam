@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require 'mjpeg'
+require 'base64'
+require 'RMagick'
+
+cam = Mjpeg.new('http://axis-207w-3.corp.nearbuysystems.com/axis-cgi/mjpg/video.cgi?fps=16')
+
+frames = []
+Signal.trap('INT') do
+  capture = Magick::ImageList.new
+  frames.each {|f| capture.push(Magick::Image.from_blob(f)) }
+  capture.write('/tmp/falldown.gif')
+end
+
+cam.go do |frame|
+  frames << frame
+  frames.shift if frames.size > 2000
+end
+
