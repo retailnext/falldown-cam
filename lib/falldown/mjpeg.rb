@@ -42,7 +42,7 @@ class Falldown::Mjpeg
             if read_buffer =~ /Content-Length: (\d+)\r\n\r\n/
               state = :in_frame
               frame_remaining = $1.to_i
-              read_buffer.sub!(/.*?\r\n\r\n/m, '')
+              read_buffer.slice!(0, read_buffer.index("\r\n\r\n")+4)
             end
           end
 

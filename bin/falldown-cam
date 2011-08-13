@@ -1,16 +1,40 @@
 #!/usr/bin/env ruby
 
-require 'falldown/mjpeg'
 require 'RMagick'
+require 'getoptlong'
+require 'falldown/mjpeg'
 
-cam = Falldown::Mjpeg.new
-cam << 'http://axis-207w-3.corp.nearbuysystems.com/axis-cgi/mjpg/video.cgi?fps=16'
-cam << 'http://axis-211m-1.corp.nearbuysystems.com/axis-cgi/mjpg/video.cgi?fps=16&resolution=800x600'
+opts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--fps', '-f', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--resolution', '-r', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+fps = 16
+resolution = '320x240'
+opts.each do |opt, arg|
+  case opt
+  when '--help'
+    puts "Usage: $0 [--fps <frame rate>] [--resolution <width>x<height>] <camera> [camera...]"
+    exit!
+  when '--fps'
+    fps = arg
+  when '--resolution'
+    resolution = arg
+  end
+end
+
+streamer = Falldown::Mjpeg.new
+ARGV.each do |cam_host|
+  streamer << "http://#{cam_host}/axis-cgi/mjpg/video.cgi?fps=#{fps}&resolution=#{resolution}"
+end
 
 frames = {}
 Signal.trap('INT') do
+  puts 'Dumping GIFs.  This will take a while.'
+
   frames.keys.each do |cam_url|
-    cam_name = cam_url.sub(/http:\/\/(.*?)\..*/, '\1')
+    cam_name = cam_url.sub(/http:\/\/(.*?)[\.\/].*/, '\1')
     puts "Building GIF for #{cam_name}..."
 
     capture = Magick::ImageList.new
@@ -22,9 +46,9 @@ Signal.trap('INT') do
   exit!
 end
 
-cam.go do |url, frame|
+streamer.go do |url, frame|
   frames[url] ||= []
   frames[url] << frame
-  frames[url].shift if frames.size > 2000
+  frames[url].shift if frames[url].size > fps*120
 end
 
