@@ -1,20 +1,30 @@
 #!/usr/bin/env ruby
 
-require 'mjpeg'
-require 'base64'
+require 'falldown/mjpeg'
 require 'RMagick'
 
-cam = Mjpeg.new('http://axis-207w-3.corp.nearbuysystems.com/axis-cgi/mjpg/video.cgi?fps=16')
+cam = Falldown::Mjpeg.new
+cam << 'http://axis-207w-3.corp.nearbuysystems.com/axis-cgi/mjpg/video.cgi?fps=16'
+cam << 'http://axis-211m-1.corp.nearbuysystems.com/axis-cgi/mjpg/video.cgi?fps=16&resolution=800x600'
 
-frames = []
+frames = {}
 Signal.trap('INT') do
-  capture = Magick::ImageList.new
-  frames.each {|f| capture.push(Magick::Image.from_blob(f)) }
-  capture.write('/tmp/falldown.gif')
+  frames.keys.each do |cam_url|
+    cam_name = cam_url.sub(/http:\/\/(.*?)\..*/, '\1')
+    puts "Building GIF for #{cam_name}..."
+
+    capture = Magick::ImageList.new
+    frames[cam_url].each {|f| capture.push(Magick::Image.from_blob(f).first) }
+    capture.write("/tmp/#{cam_name}.gif")
+    puts '  done'
+  end
+
+  exit!
 end
 
-cam.go do |frame|
-  frames << frame
-  frames.shift if frames.size > 2000
+cam.go do |url, frame|
+  frames[url] ||= []
+  frames[url] << frame
+  frames[url].shift if frames.size > 2000
 end
 

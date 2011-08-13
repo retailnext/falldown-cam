@@ -6,13 +6,29 @@
 # All right reserved.
 require 'net/http'
 
-class Mjpeg
-  def initialize(url)
-    @url = url
+module Falldown
+end
+
+class Falldown::Mjpeg
+  def initialize
+    @urls = []
   end
 
-  def go
-    Net::HTTP.get_response(URI(@url)) do |res|
+  def <<(url)
+    @urls << url
+  end
+
+  def go(&block)
+    threads = []
+    @urls.each do |url|
+      threads << Thread.new { read_stream(url, &block) }
+    end
+
+    threads.each {|t| t.join }
+  end
+
+  def read_stream(url)
+    Net::HTTP.get_response(URI(url)) do |res|
       state = :done
       frame = ''
       frame_remaining = 0
@@ -39,7 +55,7 @@ class Mjpeg
           end
 
           if frame_remaining == 0 && state == :in_frame
-            yield(frame)
+            yield(url, frame)
 
             state = :done
             frame = ''
