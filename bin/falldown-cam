@@ -32,6 +32,7 @@ end
 frames = {}
 Signal.trap('INT') do
   puts 'Dumping GIFs.  This will take a while.'
+  streamer.stop
 
   frames.keys.each do |cam_url|
     cam_name = cam_url.sub(/http:\/\/(.*?)[\.\/].*/, '\1')

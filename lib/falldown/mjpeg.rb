@@ -19,12 +19,16 @@ class Falldown::Mjpeg
   end
 
   def go(&block)
-    threads = []
+    @threads = []
     @urls.each do |url|
-      threads << Thread.new { read_stream(url, &block) }
+      @threads << Thread.new { read_stream(url, &block) }
     end
 
-    threads.each {|t| t.join }
+    @threads.each {|t| t.join }
+  end
+
+  def stop
+    @threads.each {|t| t.kill }
   end
 
   def read_stream(url)
