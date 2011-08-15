@@ -31,7 +31,17 @@ class Falldown::Mjpeg
     @threads.each {|t| t.kill }
   end
 
-  def read_stream(url)
+  def read_stream(url, &block)
+    loop do
+      begin
+        do_one_stream(url, &block)
+      rescue Exception => e
+        sleep(1)
+      end
+    end
+  end
+
+  def do_one_stream(url)
     Net::HTTP.get_response(URI(url)) do |res|
       state = :done
       frame = ''
